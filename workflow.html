@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KI-Workflow für die Jobsuche</title>
+<meta name="description" content="Wie Hemen Singla mit Claude, MCP-Connectoren und Firecrawl einen Bewerbungs-Workflow aufgebaut hat.">
+<meta name="theme-color" content="#0c0c0b">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<style>
+/* Farben aus dem alten Portfolio (Dark), Schriften: Space Grotesk + IBM Plex Mono. Nur Dark Mode. */
+:root {
+  --bg: #0c0c0b;
+  --bg-raise: #161614;
+  --bg-raise-2: #1d1d1a;
+  --ink: #f5f5f4;
+  --ink-soft: #a8a29e;
+  --ink-faint: #78716c;
+  --line: #292524;
+  --accent: #f97316;
+  --accent-soft: rgba(249,115,22,.12);
+  --accent-line: rgba(249,115,22,.45);
+  --ok: #4ade80;
+  --sans: "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(rgba(245,245,244,.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+a { color: var(--ink); text-decoration-color: var(--accent-line); text-underline-offset: 4px; }
+a:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 700; }
+p { margin: 0; }
+.mono { font-family: var(--mono); }
+.eyebrow { font-family: var(--mono); font-size: .78rem; color: var(--ink-faint); letter-spacing: .02em; }
+.eyebrow b { color: var(--accent); font-weight: 500; }
+.dot { color: var(--accent); }
+
+/* Maus-Glow */
+.glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(520px circle at var(--mx, -999px) var(--my, -999px), rgba(249,115,22,.07), transparent 60%);
+}
+.page { position: relative; z-index: 1; }
+
+/* Abschnitte */
+.sec { display: grid; gap: 22px; scroll-margin-top: 32px; }
+.sec-head { display: flex; align-items: baseline; gap: 14px; }
+.sec-head h2 { font-size: 1.6rem; letter-spacing: -.01em; }
+.sec-head::after { content: ""; flex: 1; height: 1px; background: var(--line); transform: translateY(-6px); }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-family: var(--mono); font-size: .76rem; color: var(--ink-soft);
+  border: 1px solid var(--line); border-radius: 3px; padding: 3px 9px; white-space: nowrap;
+  background: var(--bg-raise);
+}
+.chip.acc { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+
+/* Einblenden beim Scrollen (Ruhezustand sichtbar) */
+.rise { transition: opacity .7s ease, transform .7s ease; }
+.rise.pre { opacity: .25; transform: translateY(14px); }
+
+/* Reise-Punkt (Pipeline) */
+.pipe { position: relative; padding: 18px 0 6px; }
+.pipe-track { position: absolute; left: 14px; right: 14px; top: 31px; height: 2px; background: var(--line); }
+.pipe-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); transition: width .6s ease; }
+.pipe-nodes { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; list-style: none; margin: 0; padding: 0; }
+.pipe-nodes li { display: grid; justify-items: center; gap: 10px; text-align: center; min-width: 0; }
+.pipe-nodes .n {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--bg); border: 2px solid var(--line); font-family: var(--mono); font-size: .7rem; color: var(--ink-faint);
+  transition: border-color .3s, color .3s, background .3s, box-shadow .3s;
+}
+.pipe-nodes .t { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); line-height: 1.3; transition: color .3s; overflow-wrap: anywhere; }
+.pipe-nodes li.done .n { border-color: var(--accent-line); color: var(--ink-soft); }
+.pipe-nodes li.on .n { border-color: var(--accent); background: var(--accent); color: var(--bg); box-shadow: 0 0 0 6px var(--accent-soft); }
+.pipe-nodes li.on .t { color: var(--ink); }
+.pipe-nodes li.me .n { border-style: dashed; }
+
+footer.foot { font-family: var(--mono); font-size: .76rem; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 22px; }
+
+@media (max-width: 640px) {
+  .pipe-track { display: none; }
+  .pipe-nodes { grid-template-columns: 1fr; gap: 10px; }
+  .pipe-nodes li { grid-template-columns: 28px 1fr; justify-items: start; text-align: left; align-items: center; }
+  .pipe-nodes .t { font-size: .78rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .rise, .rise.pre { transition: none; opacity: 1; transform: none; }
+  .glow { display: none; }
+  .pipe-fill, .pipe-nodes .n, .pipe-nodes .t { transition: none; }
+}
+
+</style>
+<style>
+/* Layout: breite Spalte (max 1180px); Ablauf als Pipeline + Karten, Entwicklung als Zeitleiste mit Füll-Schiene. */
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 24px; padding-block: 0 48px; display: grid; gap: 96px; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-block: 22px; border-bottom: 1px solid var(--line); position: sticky; top: env(safe-area-inset-top, 0px); background: rgba(12,12,11,.88); backdrop-filter: blur(8px); z-index: 5; }
+.top a { font-family: var(--mono); font-size: .82rem; text-decoration: none; color: var(--ink-soft); }
+.top a:hover { color: var(--accent); }
+.top .brand { color: var(--ink); }
+.hero { display: grid; gap: 22px; padding-top: 24px; }
+@media (max-width: 640px) { .wrap { gap: 64px; } .hero { padding-top: 0; margin-top: -32px; } .top { padding-block: 16px; } }
+.hero h1 { font-size: clamp(2.3rem, 5.6vw, 4.2rem); line-height: 1.02; letter-spacing: -.03em; max-width: 16ch; }
+.hero p { color: var(--ink-soft); font-size: 1.12rem; max-width: 62ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-family: var(--mono); font-size: .76rem; color: var(--ink-soft); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); display: inline-block; }
+.legend i.me { border-style: dashed; }
+.nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--line); gap: 1px; }
+.nums div { background: var(--bg-raise); padding: 22px 24px; display: grid; gap: 4px; }
+.nums b { font-size: 2.6rem; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nums span { color: var(--ink-soft); font-size: .93rem; }
+.lead { color: var(--ink-soft); max-width: 66ch; }
+
+.big-pipe { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raise); padding: 22px 24px 18px; }
+.big-pipe .pipe-nodes .t { font-size: .74rem; }
+.pipe-say { font-family: var(--mono); font-size: .82rem; color: var(--ink-soft); min-height: 1.4em; margin-top: 10px; }
+.pipe-say::before { content: "> "; color: var(--accent); }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px; }
+@media (min-width: 1000px) { .steps { grid-template-columns: repeat(4, 1fr); } .steps li:last-child { grid-column: span 2; } }
+.steps li { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raise); padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; transition: border-color .4s, background .4s; }
+.steps li.active { border-color: var(--accent-line); background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg-raise); }
+.steps .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.steps .num { font-family: var(--mono); font-size: .78rem; color: var(--accent); }
+.steps h3 { font-size: 1.08rem; }
+.steps p { color: var(--ink-soft); font-size: .94rem; }
+.who { font-family: var(--mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+.who.me { color: var(--accent); }
+
+.sheet-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raise); }
+.sheet { width: 100%; min-width: 640px; border-collapse: collapse; font-size: .92rem; }
+.sheet caption { text-align: left; padding: 14px 18px 0; color: var(--ink-faint); font-family: var(--mono); font-size: .76rem; }
+.sheet th, .sheet td { text-align: left; padding: 11px 18px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.sheet th { font-family: var(--mono); font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+.sheet tr:last-child td { border-bottom: 0; }
+.sheet td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.score { display: inline-block; min-width: 2.1em; text-align: center; padding: 1px 8px; border-radius: 3px; font-family: var(--mono); background: var(--bg-raise-2); border: 1px solid var(--line); }
+.score { font-weight: 500; }
+.score.s9, .score.s10 { background: #16a34a; border-color: #16a34a; color: #f0fdf4; }
+.score.s8 { background: #4ade80; border-color: #4ade80; color: #052e16; }
+.score.s7 { background: #bef264; border-color: #bef264; color: #1a2e05; }
+.score.s6 { background: #fde047; border-color: #fde047; color: #422006; }
+.score.s5 { background: #fdba74; border-color: #fdba74; color: #431407; }
+.score.s4, .score.s3, .score.s2, .score.s1 { background: #f87171; border-color: #f87171; color: #450a0a; }
+.score-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 18px 16px; font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); border-top: 1px solid var(--line); }
+.score-key .score { min-width: 1.9em; font-size: .7rem; padding: 0 6px; }
+.status { font-family: var(--mono); font-size: .76rem; padding: 2px 9px; border-radius: 3px; border: 1px solid var(--line); color: var(--ink-soft); }
+.status.done { color: var(--ok); border-color: rgba(74,222,128,.35); }
+.status.ready { color: var(--accent); border-color: var(--accent-line); }
+.status.done { background: rgba(74,222,128,.1); }
+.status.saved { color: #fde047; border-color: rgba(253,224,71,.3); background: rgba(253,224,71,.07); }
+
+.tl-box { position: relative; }
+.tl { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.tl-rail { position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.tl-fill { position: absolute; left: 0; top: 0; width: 100%; height: 0; background: var(--accent); }
+.tl li { position: relative; padding-left: 42px; }
+.tl li::before { content: ""; position: absolute; left: 3px; top: 24px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); }
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raise); padding: 18px 22px; display: grid; gap: 12px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; align-items: baseline; }
+.card-head h3 { font-size: 1.1rem; }
+.card-head .when { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); white-space: nowrap; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.pair > div { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.pair .k { font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+.pair .k.l { color: var(--accent); }
+.pair p { color: var(--ink-soft); font-size: .95rem; }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.rule { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raise); padding: 20px 22px; display: grid; gap: 10px; align-content: start; }
+.rule h3 { font-size: 1.05rem; }
+.rule p { color: var(--ink-soft); font-size: .95rem; }
+.quote { font-family: var(--mono); font-size: .8rem; color: var(--accent); background: var(--bg-raise-2); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; overflow-wrap: anywhere; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 32px; align-items: start; }
+.cols > div { display: grid; gap: 18px; align-content: start; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.list li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; color: var(--ink-soft); }
+.list li::before { content: "→"; color: var(--accent); font-family: var(--mono); }
+.list.next li::before { content: "○"; }
+.honest { border-left: 2px solid var(--accent); padding: 4px 0 4px 18px; color: var(--ink-soft); max-width: 70ch; }
+.end { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: .82rem; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--bg-raise); padding: 9px 14px; border-radius: 4px; transition: border-color .2s, color .2s; }
+.btn:hover { border-color: var(--accent-line); color: var(--accent); }
+</style>
+
+<div class="glow" aria-hidden="true"></div>
+<div class="page">
+<div class="wrap">
+
+  <nav class="top" aria-label="Kopfzeile">
+    <a class="brand" href="./">hemen.singla<span class="dot">.</span></a>
+    <a href="./">← zurück zur Startseite</a>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow"><b>//</b> projekt · seit september 2026</span>
+    <h1><span data-decode>KI-Workflow für die Jobsuche</span><span class="dot">.</span></h1>
+    <p>Seit September 2026 suche ich eine Werkstudentenstelle. Statt jede Anzeige von Hand zu prüfen, habe ich mir mit Claude einen Ablauf aufgebaut, der Stellen findet, bewertet und in einer Tabelle sammelt. Die Entscheidungen treffe ich selbst. Hier zeige ich, wie der Ablauf funktioniert und wie ich ihn Schritt für Schritt verbessert habe.</p>
+    <div class="legend"><span><i></i>macht die KI</span><span><i class="me"></i>mache ich selbst</span></div>
+  </header>
+
+  <section class="sec rise" aria-label="Zahlen">
+    <span class="eyebrow">stand: 6. oktober 2026</span>
+    <div class="nums">
+      <div><b>77</b><span>Stellen geprüft und bewertet</span></div>
+      <div><b>20</b><span>Bewerbungen verschickt</span></div>
+      <div><b>4</b><span>verbundene Werkzeuge: Gmail, Google Sheets, Google Drive, Firecrawl</span></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="ablauf">
+    <div class="sec-head"><span class="eyebrow"><b>//</b> 01</span><h2 id="ablauf">So funktioniert es</h2></div>
+    <p class="lead">Alles läuft in einem Claude Project: Dort liegen meine Regeln, mein Lebenslauf und frühere Anschreiben. Über MCP-Connectoren kann Claude auf meine Werkzeuge zugreifen. Der orange Punkt zeigt, wie eine Stelle durch den Ablauf wandert.</p>
+    <div class="big-pipe">
+      <div class="pipe" data-pipe>
+        <div class="pipe-track"><div class="pipe-fill"></div></div>
+        <ol class="pipe-nodes">
+          <li data-say="Gmail + Firecrawl: Job-Alerts lesen und Jobportale durchsuchen"><span class="n">1</span><span class="t">Finden</span></li>
+          <li data-say="Firecrawl: Originalanzeige als sauberen Text holen"><span class="n">2</span><span class="t">Anzeige öffnen</span></li>
+          <li data-say="Claude: mit meinen Regeln vergleichen, Score 1–10"><span class="n">3</span><span class="t">Bewerten</span></li>
+          <li data-say="Google Sheets: Zeile im Tracker, nach Score sortiert"><span class="n">4</span><span class="t">Tracker</span></li>
+          <li class="me" data-say="Ich: Stelle besprechen, Fragen per Auswahl beantworten"><span class="n">5</span><span class="t">Besprechen</span></li>
+          <li data-say="Claude: Anschreiben als PDF, genau eine Seite"><span class="n">6</span><span class="t">Anschreiben</span></li>
+          <li class="me" data-say="Ich: prüfen, korrigieren, selbst bewerben"><span class="n">7</span><span class="t">Bewerben</span></li>
+        </ol>
+        <p class="pipe-say" data-pipe-label aria-live="off"></p>
+      </div>
+    </div>
+    <ol class="steps">
+      <li data-step="0"><div class="head"><span class="num">01 · Gmail + Firecrawl</span><span class="who">KI</span></div><h3>Stellen finden</h3><p>Claude liest neue Job-Alerts aus meinem Postfach. Zusätzlich sucht es mit Firecrawl auf Jobportalen und Karriereseiten (z. B. JOIN, Personio) nach passenden Stellen.</p></li>
+      <li data-step="1"><div class="head"><span class="num">02 · Firecrawl</span><span class="who">KI</span></div><h3>Originalanzeige öffnen</h3><p>Firecrawl öffnet die Anzeige auf der Firmenseite und gibt nur den Text zurück, ohne Menüs und Werbung.</p></li>
+      <li data-step="2"><div class="head"><span class="num">03 · Claude Project</span><span class="who">KI</span></div><h3>Prüfen und bewerten</h3><p>Claude vergleicht die Anzeige mit meinen Regeln (Bereich, Ort, Pendelzeit, Anforderungen) und gibt einen Score von 1 bis 10.</p></li>
+      <li data-step="3"><div class="head"><span class="num">04 · Google Sheets</span><span class="who">KI</span></div><h3>In den Tracker eintragen</h3><p>Jede Stelle bekommt eine Zeile. Die Tabelle wird nach Score sortiert, die besten Stellen stehen oben.</p></li>
+      <li data-step="4"><div class="head"><span class="num">05 · Multiple Choice</span><span class="who me">ich</span></div><h3>Besprechen</h3><p>Vor jedem Anschreiben: Was ist die Stelle, was fehlt mir, was soll drinstehen? Offene Fragen beantworte ich per Auswahl.</p></li>
+      <li data-step="5"><div class="head"><span class="num">06 · PDF</span><span class="who">KI</span></div><h3>Anschreiben erstellen</h3><p>Claude schreibt das Anschreiben in einfachem Deutsch, immer im gleichen Format und genau eine Seite lang.</p></li>
+      <li data-step="6"><div class="head"><span class="num">07 · Bewerbung</span><span class="who me">ich</span></div><h3>Prüfen und bewerben</h3><p>Ich lese jedes Anschreiben, korrigiere es und bewerbe mich selbst. Danach setze ich den Status im Tracker auf „Beworben“.</p></li>
+    </ol>
+    <div class="sheet-wrap rise">
+      <table class="sheet">
+        <caption>so sieht der tracker aus · vereinfachte beispielzeilen, sortiert nach score</caption>
+        <thead><tr><th>Score</th><th>Stelle</th><th>Ort</th><th>gesehen</th><th>Status</th><th>Follow-up</th></tr></thead>
+        <tbody>
+          <tr><td><span class="score s9">9</span></td><td>Werkstudent KI &amp; Innovation</td><td>Köln</td><td class="num">04.10.2026</td><td><span class="status done">Beworben</span></td><td class="num">15.10.2026</td></tr>
+          <tr><td><span class="score s9">9</span></td><td>Werkstudent IT-Support &amp; interne IT</td><td>Köln</td><td class="num">04.10.2026</td><td><span class="status done">Beworben</span></td><td class="num">15.10.2026</td></tr>
+          <tr><td><span class="score s8">8</span></td><td>Werkstudent Automatisierung &amp; Workflows</td><td>Remote</td><td class="num">06.10.2026</td><td><span class="status done">Beworben</span></td><td class="num">16.10.2026</td></tr>
+          <tr><td><span class="score s8">8</span></td><td>Werkstudent KI &amp; Automatisierung</td><td>Düsseldorf</td><td class="num">06.10.2026</td><td><span class="status saved">Gespeichert</span></td><td class="num">–</td></tr>
+          <tr><td><span class="score s7">7</span></td><td>Werkstudent Datenpflege CRM</td><td>Remote</td><td class="num">06.10.2026</td><td><span class="status saved">Gespeichert</span></td><td class="num">–</td></tr>
+          <tr><td><span class="score s6">6</span></td><td>Werkstudent Business Operations</td><td>Remote</td><td class="num">06.10.2026</td><td><span class="status saved">Gespeichert</span></td><td class="num">–</td></tr>
+          <tr><td><span class="score s5">5</span></td><td>Werkstudent Softwareentwicklung</td><td>Düsseldorf</td><td class="num">06.10.2026</td><td><span class="status saved">Gespeichert</span></td><td class="num">–</td></tr>
+          <tr><td><span class="score s4">4</span></td><td>Werkstudent Informationssicherheit</td><td>Bonn</td><td class="num">03.10.2026</td><td><span class="status saved">Gespeichert</span></td><td class="num">–</td></tr>
+        </tbody>
+      </table>
+      <div class="score-key">score: <span class="score s9">9</span><span class="score s8">8</span><span class="score s7">7</span><span class="score s6">6</span><span class="score s5">5</span><span class="score s4">≤4</span> · grün = passt gut, rot = passt kaum</div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="entwicklung">
+    <div class="sec-head"><span class="eyebrow"><b>//</b> 02</span><h2 id="entwicklung">So ist er entstanden</h2></div>
+    <p class="lead">Der Workflow war nicht von Anfang an fertig. Jede Änderung kam aus einem Problem, das ich bei der Arbeit bemerkt habe.</p>
+    <div class="tl-box" data-timeline>
+      <div class="tl-rail" aria-hidden="true"><div class="tl-fill"></div></div>
+    <ol class="tl">
+      <li><div class="card rise"><div class="card-head"><h3>Claude Project mit Plan-Datei</h3><span class="when">september 2026</span></div><div class="pair"><div><span class="k">Problem</span><p>Ich habe im normalen Chat nach Jobs gesucht. Jeder neue Chat fing bei null an.</p></div><div><span class="k l">Lösung</span><p>Ein Claude Project mit einer Datei, die meinen Plan erklärt.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Feste Projekt-Anweisungen</h3></div><div class="pair"><div><span class="k">Problem</span><p>Claude hat die Plan-Datei nicht jedes Mal gelesen. Ich musste immer wieder erklären, wie alles laufen soll.</p></div><div><span class="k l">Lösung</span><p>Die Regeln stehen jetzt in den Projekt-Anweisungen. Die liest Claude in jedem Chat.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Connectoren für Gmail, Sheets und Drive</h3></div><div class="pair"><div><span class="k">Ziel</span><p>Claude soll Job-Alerts selbst lesen und die Ergebnisse direkt in eine Tabelle schreiben.</p></div><div><span class="k l">Lösung</span><p>Über MCP-Connectoren liest Claude die Alerts direkt und schreibt in die Tabelle. Zusätzlich sucht es im Web.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Firecrawl für Webseiten</h3></div><div class="pair"><div><span class="k">Problem</span><p>Die Websuche hat nicht alle Stellen gefunden und die Anzeigen oft nicht genau gelesen.</p></div><div><span class="k l">Lösung</span><p>Ich habe recherchiert, wie man das löst, und Firecrawl verbunden. Es sucht gezielt auf Jobportalen, öffnet Seiten wie ein Browser und liefert sauberen Text.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Score-Spalte</h3></div><div class="pair"><div><span class="k">Problem</span><p>Viele Stellen wurden als „passend“ eingetragen. Ich wusste nicht, wo ich mich zuerst bewerben soll.</p></div><div><span class="k l">Lösung</span><p>Jede Stelle bekommt einen Score von 1 bis 10 nach festen Kriterien. Die Tabelle wird danach sortiert.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Übergabe-Datei für neue Chats</h3></div><div class="pair"><div><span class="k">Problem</span><p>In einem neuen Chat fehlte, was im letzten Chat passiert war und was als Nächstes kommt.</p></div><div><span class="k l">Lösung</span><p>Eine Markdown-Datei speichert den Stand. Mit einem festen Befehl aktualisiert Claude sie, bevor ich wechsle. Der neue Chat liest sie zuerst.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Fokus auf das Wichtige</h3></div><div class="pair"><div><span class="k">Problem</span><p>Claude hat bei jeder Stelle auch über Dinge nachgedacht, die für meine Entscheidung unwichtig waren.</p></div><div><span class="k l">Lösung</span><p>Eine Regel legt fest, was geprüft wird: Aufgaben, Anforderungen, Lücken, Haken. Den Rest entscheide ich selbst.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Ehrlichkeits- und Sicherheitsregeln</h3></div><div class="pair"><div><span class="k">Problem</span><p>Eine KI formuliert schnell zu positiv. In einer Bewerbung darf aber nichts stehen, was ich im Gespräch nicht erklären kann.</p></div><div><span class="k l">Lösung</span><p>Nur wahre Aussagen, Lücken werden offen genannt. Gmail darf nur Entwürfe anlegen und nie selbst senden.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Erst besprechen, dann erstellen</h3><span class="when">5. oktober 2026</span></div><div class="pair"><div><span class="k">Problem</span><p>Ein Anschreiben entstand, bevor alle Infos da waren. Eine meiner Fähigkeiten fehlte, weil niemand danach gefragt hatte.</p></div><div><span class="k l">Lösung</span><p>Vor jedem Anschreiben bespricht Claude die Stelle mit mir und stellt Fragen. Erst nach meinem „Ja“ entsteht das PDF.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Fragen als Multiple Choice</h3><span class="when">5. oktober 2026</span></div><div class="pair"><div><span class="k">Problem</span><p>Fragen standen mitten im Text und gingen leicht unter.</p></div><div><span class="k l">Lösung</span><p>Claude stellt Fragen jetzt als Auswahl. Ich antworte schneller und übersehe nichts.</p></div></div></div></li>
+      <li><div class="card rise"><div class="card-head"><h3>Festes Format für Anschreiben</h3></div><div class="pair"><div><span class="k">Ziel</span><p>Jedes Anschreiben soll gleich sauber aussehen, egal in welchem Chat es entsteht.</p></div><div><span class="k l">Lösung</span><p>Feste Vorgaben für Schrift, Ränder und Aufbau. Vor dem Senden wird automatisch geprüft, ob es genau eine Seite ist.</p></div></div></div></li>
+    </ol>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="regeln">
+    <div class="sec-head"><span class="eyebrow"><b>//</b> 03</span><h2 id="regeln">Die KI arbeitet zu, ich entscheide</h2></div>
+    <p class="lead">Diese Regeln stehen in meinen Projekt-Anweisungen. Die Zitate sind wörtlich übernommen.</p>
+    <div class="rules">
+      <div class="rule rise"><h3>Nur wahre Aussagen</h3><p>Jeder Satz im Anschreiben muss stimmen, und ich muss ihn im Gespräch erklären können. Was ich noch nicht kann, steht offen drin.</p><div class="quote">„Every claim must be true and something he can explain in an interview.“</div></div>
+      <div class="rule rise"><h3>Nichts wird automatisch gesendet</h3><p>Die KI darf E-Mails nur als Entwurf anlegen. Bewerbungen schicke ich selbst ab.</p><div class="quote">„Only create drafts, never send.“</div></div>
+      <div class="rule rise"><h3>Erst fragen, dann bauen</h3><p>Fehlt eine Information, fragt Claude nach, statt etwas anzunehmen. Dokumente entstehen erst nach meiner Freigabe.</p><div class="quote">„Ask, don’t assume or flag later.“</div></div>
+      <div class="rule rise"><h3>Ich prüfe jedes Ergebnis</h3><p>Scores, Texte und Tabelleneinträge schaue ich mir an, bevor ich sie nutze. Wenn etwas ungenau ist, passe ich die Regeln an.</p></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="lernen">
+    <div class="sec-head"><span class="eyebrow"><b>//</b> 04</span><h2 id="lernen">Lernen und Weiterbauen</h2></div>
+    <div class="cols">
+      <div class="rise"><span class="eyebrow">ki im studium</span>
+        <ul class="list"><li><span>Lernseiten zu Uni-Modulen, in kleinen Schritten erklärt</span></li><li><span>Java-Konzepte mit eigenen Beispielen; bei Code-Fehlern zeigt mir Claude die Zeile, und ich korrigiere selbst</span></li><li><span>Quizze und Karteikarten, um mich vor Prüfungen selbst abzufragen</span></li></ul>
+      </div>
+      <div class="rise"><span class="eyebrow">was ich mitnehme</span>
+        <ul class="list"><li><span>Werkzeuge über MCP-Connectoren mit einer KI verbinden</span></li><li><span>Regeln so formulieren, dass eine KI sie zuverlässig befolgt</span></li><li><span>Einen Ablauf in Schritte zerlegen und Probleme einzeln lösen</span></li></ul>
+      </div>
+      <div class="rise"><span class="eyebrow">lerne ich gerade</span>
+        <ul class="list next"><li><span>Claude Academy: zuerst KI-Grundlagen, danach MCP, Claude Code und API</span></li><li><span>SQL im Studium (Wintersemester 2026/27)</span></li><li><span>n8n: erste Versuche</span></li></ul>
+      </div>
+    </div>
+    <p class="honest rise">Für diesen Workflow habe ich keinen eigenen Programmcode geschrieben. Ich habe Werkzeuge verbunden, Regeln formuliert und den Ablauf mit Claude Schritt für Schritt verbessert. Genau so möchte ich auch in einem Unternehmen arbeiten: Abläufe verstehen, sinnvoll automatisieren und die Ergebnisse prüfen.</p>
+    <div class="end">
+      <a class="btn" href="./">← Startseite</a>
+      <a class="btn" href="https://www.linkedin.com/in/hemen-singla" target="_blank" rel="noopener">LinkedIn ↗</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>© 2026 Hemen Singla · Sankt Augustin</span>
+    <span>Gebaut mit Claude · HTML, CSS, JavaScript</span>
+  </footer>
+
+</div>
+</div>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+
+  // 1) Maus-Glow (nur Desktop)
+  var glow = document.querySelector('.glow');
+  if (glow && fine && !reduce) {
+    window.addEventListener('pointermove', function (e) {
+      glow.style.setProperty('--mx', e.clientX + 'px');
+      glow.style.setProperty('--my', e.clientY + 'px');
+    }, { passive: true });
+  }
+
+  // 2) Name "entschlüsselt" sich einmal
+  document.querySelectorAll('[data-decode]').forEach(function (el) {
+    if (reduce) return;
+    var final = el.textContent;
+    var chars = 'abcdefghijklmnopqrstuvwxyz01_#/<>';
+    var frame = 0, total = 22;
+    var tick = function () {
+      frame++;
+      var out = '';
+      for (var i = 0; i < final.length; i++) {
+        var settle = (i / final.length) * total;
+        if (final[i] === ' ' || frame >= settle) out += final[i];
+        else out += chars[Math.floor(Math.random() * chars.length)];
+      }
+      el.textContent = out;
+      if (frame < total) requestAnimationFrame(function () { setTimeout(tick, 28); });
+      else el.textContent = final;
+    };
+    tick();
+  });
+
+  // 3) Sanftes Einblenden (Ruhezustand ist sichtbar; nur Elemente unterhalb des Bildschirms)
+  var items = Array.prototype.slice.call(document.querySelectorAll('.rise'));
+  if (!reduce && 'IntersectionObserver' in window) {
+    var vh = window.innerHeight;
+    items.forEach(function (el) { if (el.getBoundingClientRect().top > vh * 0.9) el.classList.add('pre'); });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.remove('pre'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+    setTimeout(function () { items.forEach(function (el) { el.classList.remove('pre'); }); }, 4000);
+  }
+
+  // 4) Reise-Punkt durch die 7 Schritte
+  document.querySelectorAll('[data-pipe]').forEach(function (pipe) {
+    var nodes = pipe.querySelectorAll('.pipe-nodes li');
+    var fill = pipe.querySelector('.pipe-fill');
+    var label = pipe.querySelector('[data-pipe-label]');
+    var n = nodes.length, i = 0;
+    var show = function (k) {
+      nodes.forEach(function (li, j) { li.classList.toggle('on', j === k); li.classList.toggle('done', j < k); });
+      if (fill) fill.style.width = (n > 1 ? (k / (n - 1)) * 100 : 0) + '%';
+      if (label) label.textContent = nodes[k].getAttribute('data-say') || '';
+      var linked = document.querySelectorAll('[data-step]');
+      linked.forEach(function (c) { c.classList.toggle('active', +c.getAttribute('data-step') === k); });
+    };
+    show(0);
+    if (reduce) return;
+    setInterval(function () { i = (i + 1) % n; show(i); }, 1700);
+  });
+
+  // 5) Zeitleiste füllt sich beim Scrollen
+  var tl = document.querySelector('[data-timeline]');
+  if (tl) {
+    var bar = tl.querySelector('.tl-fill');
+    var onScroll = function () {
+      var r = tl.getBoundingClientRect();
+      var p = (window.innerHeight * 0.6 - r.top) / r.height;
+      p = Math.max(0, Math.min(1, p));
+      bar.style.height = (p * 100) + '%';
+    };
+    if (reduce) { bar.style.height = '100%'; }
+    else { window.addEventListener('scroll', onScroll, { passive: true }); onScroll(); }
+  }
+})();
+
+</script>
+</body>
+</html>

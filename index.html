@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hemen Singla</title>
+<meta name="description" content="Hemen Singla – Informatik-Student an der HBRS mit Fokus auf KI-Automatisierung und IT.">
+<meta name="theme-color" content="#0c0c0b">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<style>
+/* Farben aus dem alten Portfolio (Dark), Schriften: Space Grotesk + IBM Plex Mono. Nur Dark Mode. */
+:root {
+  --bg: #0c0c0b;
+  --bg-raise: #161614;
+  --bg-raise-2: #1d1d1a;
+  --ink: #f5f5f4;
+  --ink-soft: #a8a29e;
+  --ink-faint: #78716c;
+  --line: #292524;
+  --accent: #f97316;
+  --accent-soft: rgba(249,115,22,.12);
+  --accent-line: rgba(249,115,22,.45);
+  --ok: #4ade80;
+  --sans: "Space Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(rgba(245,245,244,.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+a { color: var(--ink); text-decoration-color: var(--accent-line); text-underline-offset: 4px; }
+a:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 700; }
+p { margin: 0; }
+.mono { font-family: var(--mono); }
+.eyebrow { font-family: var(--mono); font-size: .78rem; color: var(--ink-faint); letter-spacing: .02em; }
+.eyebrow b { color: var(--accent); font-weight: 500; }
+.dot { color: var(--accent); }
+
+/* Maus-Glow */
+.glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(520px circle at var(--mx, -999px) var(--my, -999px), rgba(249,115,22,.07), transparent 60%);
+}
+.page { position: relative; z-index: 1; }
+
+/* Abschnitte */
+.sec { display: grid; gap: 22px; scroll-margin-top: 32px; }
+.sec-head { display: flex; align-items: baseline; gap: 14px; }
+.sec-head h2 { font-size: 1.6rem; letter-spacing: -.01em; }
+.sec-head::after { content: ""; flex: 1; height: 1px; background: var(--line); transform: translateY(-6px); }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-family: var(--mono); font-size: .76rem; color: var(--ink-soft);
+  border: 1px solid var(--line); border-radius: 3px; padding: 3px 9px; white-space: nowrap;
+  background: var(--bg-raise);
+}
+.chip.acc { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+
+/* Einblenden beim Scrollen (Ruhezustand sichtbar) */
+.rise { transition: opacity .7s ease, transform .7s ease; }
+.rise.pre { opacity: .25; transform: translateY(14px); }
+
+/* Reise-Punkt (Pipeline) */
+.pipe { position: relative; padding: 18px 0 6px; }
+.pipe-track { position: absolute; left: 14px; right: 14px; top: 31px; height: 2px; background: var(--line); }
+.pipe-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); transition: width .6s ease; }
+.pipe-nodes { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; list-style: none; margin: 0; padding: 0; }
+.pipe-nodes li { display: grid; justify-items: center; gap: 10px; text-align: center; min-width: 0; }
+.pipe-nodes .n {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--bg); border: 2px solid var(--line); font-family: var(--mono); font-size: .7rem; color: var(--ink-faint);
+  transition: border-color .3s, color .3s, background .3s, box-shadow .3s;
+}
+.pipe-nodes .t { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); line-height: 1.3; transition: color .3s; overflow-wrap: anywhere; }
+.pipe-nodes li.done .n { border-color: var(--accent-line); color: var(--ink-soft); }
+.pipe-nodes li.on .n { border-color: var(--accent); background: var(--accent); color: var(--bg); box-shadow: 0 0 0 6px var(--accent-soft); }
+.pipe-nodes li.on .t { color: var(--ink); }
+.pipe-nodes li.me .n { border-style: dashed; }
+
+footer.foot { font-family: var(--mono); font-size: .76rem; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 22px; }
+
+@media (max-width: 640px) {
+  .pipe-track { display: none; }
+  .pipe-nodes { grid-template-columns: 1fr; gap: 10px; }
+  .pipe-nodes li { grid-template-columns: 28px 1fr; justify-items: start; text-align: left; align-items: center; }
+  .pipe-nodes .t { font-size: .78rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .rise, .rise.pre { transition: none; opacity: 1; transform: none; }
+  .glow { display: none; }
+  .pipe-fill, .pipe-nodes .n, .pipe-nodes .t { transition: none; }
+}
+
+</style>
+<style>
+/* Layout: zwei Spalten ab 1000px – links fix (Name, Navigation), rechts scrollender Inhalt. */
+.shell { max-width: 1240px; margin: 0 auto; padding-inline: 24px; display: grid; grid-template-columns: 1fr; gap: 56px; padding-block: 48px 40px; }
+@media (min-width: 1000px) {
+  .shell { grid-template-columns: minmax(340px, 5fr) 7fr; gap: 72px; padding-block: 0; }
+  .side { position: sticky; top: 0; height: 100vh; padding-block: 88px 56px; display: flex; flex-direction: column; justify-content: space-between; }
+  .main { padding-block: 88px 56px; }
+}
+.side { display: grid; gap: 28px; align-content: start; }
+.side h1 { font-size: clamp(2.6rem, 5.2vw, 4rem); line-height: 1; letter-spacing: -.03em; }
+.role { font-size: 1.15rem; font-weight: 500; }
+.intro { color: var(--ink-soft); max-width: 40ch; }
+.nav { list-style: none; margin: 0; padding: 0; display: none; gap: 14px; }
+@media (min-width: 1000px) { .nav { display: grid; } }
+.nav a { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; font-family: var(--mono); font-size: .8rem; color: var(--ink-faint); letter-spacing: .04em; text-transform: uppercase; }
+.nav a::before { content: ""; width: 28px; height: 1px; background: var(--ink-faint); transition: width .25s, background .25s; }
+.nav a:hover, .nav a.active { color: var(--ink); }
+.nav a:hover::before, .nav a.active::before { width: 60px; background: var(--accent); }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: .82rem; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--bg-raise); padding: 9px 14px; border-radius: 4px; transition: border-color .2s, color .2s; }
+.btn:hover { border-color: var(--accent-line); color: var(--accent); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.primary:hover { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.main { display: grid; gap: 88px; min-width: 0; }
+
+/* Terminal */
+.term { border: 1px solid var(--line); border-radius: 8px; background: #0f0f0e; overflow: hidden; }
+.term-bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); }
+.term-bar i { width: 10px; height: 10px; border-radius: 50%; background: #3a3632; display: inline-block; }
+.term-bar i:nth-child(1) { background: #f87171; } .term-bar i:nth-child(2) { background: #fbbf24; } .term-bar i:nth-child(3) { background: #4ade80; }
+.term-bar span { margin-left: 8px; }
+.term-body { font-family: var(--mono); font-size: .84rem; line-height: 1.7; padding: 14px 16px 16px; min-height: 230px; max-height: 360px; overflow-y: auto; }
+.term-body .ln { white-space: pre-wrap; overflow-wrap: anywhere; }
+.term-body .p { color: var(--accent); }
+.term-body .c { color: var(--ink); }
+.term-body .o { color: var(--ink-soft); }
+.term-body .k { color: #fbbf24; }
+.term-body .hint { color: var(--ink-faint); }
+.term-input { display: flex; gap: 8px; align-items: center; }
+.term-input input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--ink); font: inherit; outline: none; caret-color: var(--accent); }
+
+/* Über mich */
+.about { display: grid; gap: 16px; color: var(--ink-soft); max-width: 62ch; }
+.about strong { color: var(--ink); font-weight: 500; }
+
+/* Projekt-Karte */
+.proj { display: block; text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raise); padding: 26px 26px 22px; transition: border-color .25s, transform .25s; }
+.proj:hover { border-color: var(--accent-line); color: var(--ink); }
+.proj-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.proj h3 { font-size: 1.35rem; letter-spacing: -.01em; }
+.proj h3 .arr { display: inline-block; transition: transform .25s; color: var(--accent); }
+.proj:hover h3 .arr { transform: translate(4px, -4px); }
+.live { font-family: var(--mono); font-size: .72rem; color: var(--ok); display: inline-flex; align-items: center; gap: 6px; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(74,222,128,.15); }
+.proj p.desc { color: var(--ink-soft); margin-top: 10px; max-width: 60ch; }
+.pipe-say { font-family: var(--mono); font-size: .78rem; color: var(--ink-soft); min-height: 1.4em; margin-top: 8px; }
+.pipe-say::before { content: "> "; color: var(--accent); }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 16px; font-family: var(--mono); font-size: .78rem; color: var(--ink-faint); }
+.stats b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* Skills */
+.skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.skill { border: 1px solid var(--line); border-radius: 8px; background: var(--bg-raise); padding: 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.skill h3 { font-size: 1.02rem; }
+.skill ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; color: var(--ink-soft); font-size: .93rem; }
+.skill li { position: relative; padding-left: 16px; }
+.skill li::before { content: "·"; position: absolute; left: 2px; top: 0; color: var(--accent); font-weight: 700; }
+.skill .now { margin-left: 6px; white-space: nowrap; }
+.skill .now { color: var(--accent); font-family: var(--mono); font-size: .72rem; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 38px; cursor: pointer; border: 0; background: none; padding: 0; width: 100%; }
+.bars span { flex: 1; background: var(--line); border-radius: 1px; transition: height .25s ease, background .25s; }
+.bars span.hot { background: var(--accent); }
+.bars-cap { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); }
+
+/* Erfahrung */
+.exp { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.exp li { display: grid; grid-template-columns: 150px 1fr; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.exp li:last-child { border-bottom: 0; }
+.exp .when { font-family: var(--mono); font-size: .78rem; color: var(--ink-faint); padding-top: 3px; }
+.exp .what { color: var(--ink-soft); }
+.exp .what b { color: var(--ink); font-weight: 500; }
+@media (max-width: 560px) { .exp li { grid-template-columns: 1fr; gap: 2px; } }
+</style>
+
+<div class="glow" aria-hidden="true"></div>
+<div class="page">
+<div class="shell">
+
+  <aside class="side">
+    <div style="display:grid;gap:22px">
+      <span class="eyebrow">hemen.singla</span>
+      <h1><span data-decode>Hemen Singla</span><span class="dot">.</span></h1>
+      <p class="role">Informatik-Student · KI, Daten &amp; Automatisierung</p>
+      <p class="intro">Ich studiere Informatik an der Hochschule Bonn-Rhein-Sieg und baue mir Abläufe mit KI, die mir wiederkehrende Arbeit abnehmen. Ich suche eine Werkstudentenstelle im Raum Bonn/Köln oder remote.</p>
+      <ul class="nav" aria-label="Seitennavigation">
+        <li><a href="#about">Über mich</a></li>
+        <li><a href="#projekt">Projekt</a></li>
+        <li><a href="#skills">Skills</a></li>
+        <li><a href="#erfahrung">Erfahrung</a></li>
+      </ul>
+    </div>
+    <div class="links">
+      <a class="btn primary" href="workflow.html">Workflow ansehen →</a>
+      <a class="btn" href="https://www.linkedin.com/in/hemen-singla" target="_blank" rel="noopener">LinkedIn ↗</a>
+      <a class="btn" href="https://github.com/hemensingla" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <section class="sec" id="about" aria-label="Über mich">
+      <div class="term" role="region" aria-label="Interaktives Terminal">
+        <div class="term-bar"><i></i><i></i><i></i><span>hemen@hbrs — zsh</span></div>
+        <div class="term-body" id="term">
+          <div id="term-out"></div>
+          <label class="term-input" id="term-line" hidden><span class="p">~ $</span><input id="term-in" type="text" autocomplete="off" spellcheck="false" aria-label="Befehl eingeben"></label>
+        </div>
+      </div>
+      <div class="sec-head"><span class="eyebrow"><b>//</b> 01</span><h2>Über mich</h2></div>
+      <div class="about rise">
+        <p>Ich studiere <strong>Informatik (B.Sc.) im 3. Semester</strong> an der Hochschule Bonn-Rhein-Sieg. Mich interessieren Informatik und KI, besonders Daten und Automatisierung: Abläufe so bauen, dass weniger kopiert und gesucht wird und mehr Zeit für Entscheidungen bleibt. Ich bin offen für Neues und lerne gern dazu.</p>
+        <p>Neben dem Studium arbeite ich als Werkstudent in der Warendisposition. Davor habe ich in einem E-Commerce-Start-up Produktdaten und Marktplätze gepflegt. Aus beiden Jobs kenne ich Daten, die zwischen Systemen sauber bleiben müssen.</p>
+      </div>
+    </section>
+
+    <section class="sec" id="projekt" aria-label="Projekt">
+      <div class="sec-head"><span class="eyebrow"><b>//</b> 02</span><h2>Projekt</h2></div>
+      <a class="proj rise" href="workflow.html">
+        <div class="proj-top">
+          <h3>KI-Workflow für die Jobsuche <span class="arr">↗</span></h3>
+          <span class="live">läuft seit September 2026</span>
+        </div>
+        <p class="desc">Claude liest Job-Alerts, sucht mit Firecrawl auf Jobportalen, öffnet die Originalanzeigen, bewertet sie nach meinen Regeln und trägt sie in einen Tracker ein. Anschreiben entstehen erst nach einer Besprechung, und abschicken tue ich selbst.</p>
+        <div class="pipe" data-pipe>
+          <div class="pipe-track"><div class="pipe-fill"></div></div>
+          <ol class="pipe-nodes">
+            <li data-say="Gmail + Firecrawl: Job-Alerts lesen und Jobportale durchsuchen"><span class="n">1</span><span class="t">Finden</span></li>
+            <li data-say="Firecrawl: Originalanzeige als sauberen Text holen"><span class="n">2</span><span class="t">Anzeige</span></li>
+            <li data-say="Claude: mit meinen Regeln vergleichen, Score 1–10"><span class="n">3</span><span class="t">Score</span></li>
+            <li data-say="Google Sheets: Zeile im Tracker, nach Score sortiert"><span class="n">4</span><span class="t">Tracker</span></li>
+            <li class="me" data-say="Ich: Stelle besprechen, Fragen per Auswahl beantworten"><span class="n">5</span><span class="t">Besprechen</span></li>
+            <li data-say="Claude: Anschreiben als PDF, genau eine Seite"><span class="n">6</span><span class="t">Anschreiben</span></li>
+            <li class="me" data-say="Ich: prüfen, korrigieren, selbst bewerben"><span class="n">7</span><span class="t">Bewerben</span></li>
+          </ol>
+          <p class="pipe-say" data-pipe-label aria-live="off"></p>
+        </div>
+        <div class="stats"><span><b>77</b> Stellen bewertet</span><span><b>20</b> Bewerbungen</span><span><b>11</b> Verbesserungen</span><span>Stand 06.10.2026</span></div>
+        <div class="chips" style="margin-top:16px">
+          <span class="chip acc">Claude Projects</span><span class="chip">MCP-Connectoren</span><span class="chip">Firecrawl</span><span class="chip">Google Sheets</span><span class="chip">Gmail</span>
+        </div>
+      </a>
+    </section>
+
+    <section class="sec" id="skills" aria-label="Skills">
+      <div class="sec-head"><span class="eyebrow"><b>//</b> 03</span><h2>Skills</h2></div>
+      <div class="skills">
+        <div class="skill rise">
+          <h3>Java &amp; Python</h3>
+          <ul><li>Grundlagen in beiden Sprachen</li><li>Objektorientierung: Klassen, Objekte, Methoden</li><li>Kontrollstrukturen, Arrays und Listen</li><li>Code verstehen und Fehler finden mit KI</li></ul>
+        </div>
+        <div class="skill rise">
+          <h3>Algorithmen &amp; Datenstrukturen</h3>
+          <ul><li>Sortierverfahren</li><li>O-Notation</li><li>Heaps und Priority Queues</li><li>Graphen: DFS, BFS, topologische Sortierung</li></ul>
+          <button class="bars" id="bars" type="button" aria-label="Quicksort-Animation starten"></button>
+          <span class="bars-cap">quicksort · klicken zum Mischen</span>
+        </div>
+        <div class="skill rise">
+          <h3>Werkzeuge</h3>
+          <ul><li>Claude: Projects, MCP-Connectoren</li><li>Microsoft 365 Copilot</li><li>NotebookLM, Perplexity</li><li>Excel</li></ul>
+        </div>
+        <div class="skill rise">
+          <h3>Lerne ich gerade</h3>
+          <ul><li>SQL <span class="now">Studium</span></li><li>Claude Academy: zuerst KI-Grundlagen, danach MCP, Claude Code und API</li><li>n8n: erste Versuche</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="erfahrung" aria-label="Erfahrung">
+      <div class="sec-head"><span class="eyebrow"><b>//</b> 04</span><h2>Erfahrung</h2></div>
+      <ul class="exp rise">
+        <li><span class="when">seit 03/2026</span><span class="what"><b>Werkstudent Warendisposition</b> · Fahrrad XXL</span></li>
+        <li><span class="when">09–12/2023</span><span class="what"><b>Minijob E-Commerce</b> · Produktdaten und Marktplätze · Manike (Start-up)</span></li>
+      </ul>
+    </section>
+
+    <footer class="foot">
+      <span>© 2026 Hemen Singla · Sankt Augustin</span>
+      <span>Gebaut mit Claude · HTML, CSS, JavaScript</span>
+    </footer>
+  </main>
+
+</div>
+</div>
+
+<script>
+(function () {
+  // Navigation: aktiven Abschnitt markieren
+  var links = document.querySelectorAll('.nav a');
+  if ('IntersectionObserver' in window && links.length) {
+    var map = {}; links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { links.forEach(function (a) { a.classList.remove('active'); }); var a = map[e.target.id]; if (a) a.classList.add('active'); } });
+    }, { rootMargin: '-35% 0px -60% 0px' });
+    Object.keys(map).forEach(function (id) { var s = document.getElementById(id); if (s) io.observe(s); });
+  }
+
+  // Quicksort-Balken
+  var bars = document.getElementById('bars');
+  if (bars) {
+    var N = 24, vals = [], els = [];
+    for (var i = 0; i < N; i++) { var s = document.createElement('span'); bars.appendChild(s); els.push(s); vals.push(i + 1); }
+    var draw = function (hot) { els.forEach(function (el, k) { el.style.height = (vals[k] / N * 100) + '%'; el.classList.toggle('hot', hot && hot.indexOf(k) > -1); }); };
+    var shuffle = function () { for (var i = N - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = vals[i]; vals[i] = vals[j]; vals[j] = t; } };
+    var steps = [];
+    var qs = function (lo, hi) { if (lo >= hi) return; var p = vals[hi], m = lo; for (var k = lo; k < hi; k++) { if (vals[k] < p) { var t = vals[k]; vals[k] = vals[m]; vals[m] = t; steps.push([vals.slice(), [k, m]]); m++; } } var t2 = vals[m]; vals[m] = vals[hi]; vals[hi] = t2; steps.push([vals.slice(), [m, hi]]); qs(lo, m - 1); qs(m + 1, hi); };
+    var timer = null, running = false;
+    var run = function () {
+      if (running) return; running = true; shuffle(); var start = vals.slice(); steps = []; qs(0, N - 1); vals = start; draw();
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) { vals = steps.length ? steps[steps.length - 1][0] : vals; draw(); running = false; return; }
+      var s = 0; timer = setInterval(function () { if (s >= steps.length) { clearInterval(timer); draw(); running = false; return; } vals = steps[s][0]; draw(steps[s][1]); s++; }, 70);
+    };
+    shuffle(); draw();
+    bars.addEventListener('click', run);
+  }
+
+  // Terminal
+  var out = document.getElementById('term-out'), line = document.getElementById('term-line'), input = document.getElementById('term-in'), body = document.getElementById('term');
+  var add = function (html, cls) { var d = document.createElement('div'); d.className = 'ln ' + (cls || ''); d.innerHTML = html; out.appendChild(d); body.scrollTop = body.scrollHeight; return d; };
+  var esc = function (s) { return s.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var cmds = {
+    help: function () { return 'befehle: <span class="k">whoami</span> · <span class="k">status</span> · <span class="k">skills</span> · <span class="k">lernen</span> · <span class="k">workflow</span> · <span class="k">kontakt</span> · <span class="k">clear</span>'; },
+    whoami: function () { return 'hemen.singla · b.sc. informatik @ hbrs · 3. semester'; },
+    status: function () { return '{ "suche": "werkstudent", "ort": ["bonn", "köln", "remote"], "start": "ab_sofort",\n  "fokus": ["informatik", "ki", "daten", "automatisierung"], "sprachen": ["de:C1", "en:C1", "hi", "pa"] }'; },
+    skills: function () { return 'java & python (grundlagen) · algorithmen & datenstrukturen\nclaude (projects, mcp) · m365 copilot · notebooklm · perplexity · excel'; },
+    lernen: function () { return 'sql (studium) · claude academy: ki-grundlagen → mcp, claude code, api · n8n (erste versuche)'; },
+    workflow: function () { return 'ki-workflow für die jobsuche → <a href="workflow.html">workflow.html</a> öffnen'; },
+    kontakt: function () { return '<a href="https://www.linkedin.com/in/hemen-singla" target="_blank" rel="noopener">linkedin.com/in/hemen-singla</a>'; },
+    sudo: function () { return 'netter versuch.'; }
+  };
+  var runCmd = function (raw) {
+    var c = raw.trim().toLowerCase().replace(/^cat\s+status\.json$/, 'status');
+    add('<span class="p">~ $</span> <span class="c">' + esc(raw) + '</span>');
+    if (!c) return;
+    if (c === 'clear') { out.innerHTML = ''; return; }
+    var f = cmds[c];
+    add(f ? f() : 'befehl nicht gefunden: ' + esc(c) + ' · tippe <span class="k">help</span>', 'o');
+  };
+  var showPrompt = function () { add('# dieses terminal ist interaktiv · tippe "help" und enter', 'hint'); line.hidden = false; };
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { runCmd(input.value); input.value = ''; body.scrollTop = body.scrollHeight; } });
+  body.addEventListener('click', function () { if (!line.hidden) input.focus({ preventScroll: true }); });
+
+  var script = ['whoami', 'cat status.json'];
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) { script.forEach(runCmd); showPrompt(); return; }
+  var si = 0;
+  var typeNext = function () {
+    if (si >= script.length) { showPrompt(); return; }
+    var text = script[si++], d = add('<span class="p">~ $</span> <span class="c"></span>'), span = d.querySelector('.c'), k = 0;
+    var t = setInterval(function () {
+      span.textContent = text.slice(0, ++k);
+      if (k >= text.length) { clearInterval(t); setTimeout(function () { out.removeChild(d); runCmd(text); setTimeout(typeNext, 450); }, 250); }
+    }, 55);
+  };
+  setTimeout(typeNext, 700);
+})();
+</script>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+
+  // 1) Maus-Glow (nur Desktop)
+  var glow = document.querySelector('.glow');
+  if (glow && fine && !reduce) {
+    window.addEventListener('pointermove', function (e) {
+      glow.style.setProperty('--mx', e.clientX + 'px');
+      glow.style.setProperty('--my', e.clientY + 'px');
+    }, { passive: true });
+  }
+
+  // 2) Name "entschlüsselt" sich einmal
+  document.querySelectorAll('[data-decode]').forEach(function (el) {
+    if (reduce) return;
+    var final = el.textContent;
+    var chars = 'abcdefghijklmnopqrstuvwxyz01_#/<>';
+    var frame = 0, total = 22;
+    var tick = function () {
+      frame++;
+      var out = '';
+      for (var i = 0; i < final.length; i++) {
+        var settle = (i / final.length) * total;
+        if (final[i] === ' ' || frame >= settle) out += final[i];
+        else out += chars[Math.floor(Math.random() * chars.length)];
+      }
+      el.textContent = out;
+      if (frame < total) requestAnimationFrame(function () { setTimeout(tick, 28); });
+      else el.textContent = final;
+    };
+    tick();
+  });
+
+  // 3) Sanftes Einblenden (Ruhezustand ist sichtbar; nur Elemente unterhalb des Bildschirms)
+  var items = Array.prototype.slice.call(document.querySelectorAll('.rise'));
+  if (!reduce && 'IntersectionObserver' in window) {
+    var vh = window.innerHeight;
+    items.forEach(function (el) { if (el.getBoundingClientRect().top > vh * 0.9) el.classList.add('pre'); });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.remove('pre'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+    setTimeout(function () { items.forEach(function (el) { el.classList.remove('pre'); }); }, 4000);
+  }
+
+  // 4) Reise-Punkt durch die 7 Schritte
+  document.querySelectorAll('[data-pipe]').forEach(function (pipe) {
+    var nodes = pipe.querySelectorAll('.pipe-nodes li');
+    var fill = pipe.querySelector('.pipe-fill');
+    var label = pipe.querySelector('[data-pipe-label]');
+    var n = nodes.length, i = 0;
+    var show = function (k) {
+      nodes.forEach(function (li, j) { li.classList.toggle('on', j === k); li.classList.toggle('done', j < k); });
+      if (fill) fill.style.width = (n > 1 ? (k / (n - 1)) * 100 : 0) + '%';
+      if (label) label.textContent = nodes[k].getAttribute('data-say') || '';
+      var linked = document.querySelectorAll('[data-step]');
+      linked.forEach(function (c) { c.classList.toggle('active', +c.getAttribute('data-step') === k); });
+    };
+    show(0);
+    if (reduce) return;
+    setInterval(function () { i = (i + 1) % n; show(i); }, 1700);
+  });
+
+  // 5) Zeitleiste füllt sich beim Scrollen
+  var tl = document.querySelector('[data-timeline]');
+  if (tl) {
+    var bar = tl.querySelector('.tl-fill');
+    var onScroll = function () {
+      var r = tl.getBoundingClientRect();
+      var p = (window.innerHeight * 0.6 - r.top) / r.height;
+      p = Math.max(0, Math.min(1, p));
+      bar.style.height = (p * 100) + '%';
+    };
+    if (reduce) { bar.style.height = '100%'; }
+    else { window.addEventListener('scroll', onScroll, { passive: true }); onScroll(); }
+  }
+})();
+
+</script>
+</body>
+</html>
